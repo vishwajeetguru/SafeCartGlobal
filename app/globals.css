@@ -23,6 +23,15 @@ canvas {
   display: block;
 }
 
+/* Tall condensed display face for the giant hero stack.
+   Uses system condensed grotesques — no webfont download needed. */
+.font-giant {
+  font-family: "Arial Narrow", "Liberation Sans Narrow",
+    "HelveticaNeue-CondensedBold", "Roboto Condensed", "Oswald",
+    "Helvetica Neue", sans-serif;
+  font-stretch: condensed;
+}
+
 /* Hide scrollbars on horizontal slider tracks (touch/drag still work) */
 .scrollbar-hide {
   -ms-overflow-style: none;

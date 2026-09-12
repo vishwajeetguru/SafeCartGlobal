@@ -198,7 +198,7 @@ export default function HeroScrollCanvas() {
         );
       }
 
-      // Cinematic overlay: headline drifts up + fades as you scroll.
+      // Cinematic overlay: headline stack drifts up + fades as you scroll.
       if (overlayRef.current) {
         gsap.to(overlayRef.current, {
           yPercent: -12,
@@ -242,14 +242,15 @@ export default function HeroScrollCanvas() {
         );
       }
 
-      // Subtle intro once the first frame is on screen.
+      // Staggered lines reveal on load.
       gsap.fromTo(
-        ".hero-intro",
-        { y: 28, opacity: 0 },
+        ".hero-intro span",
+        { y: 34, opacity: 0 },
         {
           y: 0,
           opacity: 1,
           duration: 1,
+          stagger: 0.12,
           ease: "power3.out",
           delay: 0.15,
         }
@@ -270,13 +271,14 @@ export default function HeroScrollCanvas() {
       ref={sectionRef}
       id="hero"
       className="relative h-[300vh] bg-[#0b0f0a]"
-      aria-label="Elixir hero — scroll-driven story"
+      aria-label="SwiftCart hero — scroll-driven story"
     >
       {/* Sticky full-screen viewport */}
       <div className="sticky top-0 flex h-screen w-full items-center justify-center overflow-hidden bg-[#0b0f0a]">
         {/* Static cinematic backdrop — /hero-bg.png
-            Locked full-bleed under the canvas. Oversized (-inset) so the
-            subtle scale never exposes edges — no drift, no black bars. */}
+            Golden beam, rock plinth, leaves. Locked full-bleed under the
+            canvas. Oversized (-inset) so the subtle scale never exposes
+            edges — no drift, no black bars. */}
         <div
           ref={bgRef}
           aria-hidden="true"
@@ -312,13 +314,21 @@ export default function HeroScrollCanvas() {
           />
         </div>
 
-        {/* Hero headline only */}
+        {/* Hero headline stack — centered behind the bottle canvas (z-0,
+            canvas is z-[1] and transparent, so the bottle floats in front
+            of the type). Condensed tall caps, bronze edges with the beam
+            burning through the middle, thin white rim light on the glyphs. */}
         <div
           ref={overlayRef}
-          className="pointer-events-none relative z-10 mx-auto flex max-w-4xl flex-col items-center px-6 text-center"
+          className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center justify-center px-4 text-center"
         >
-          <h1 className="hero-intro font-display text-balance text-5xl font-medium leading-[1.02] tracking-tight text-white sm:text-7xl">
-            Powered by Nature
+          <h1 className="hero-intro flex flex-col items-center gap-2 sm:gap-3">
+            <span className="font-giant bg-[linear-gradient(90deg,#3a2410_0%,#7a5426_28%,#ffedbe_50%,#7a5426_72%,#3a2410_100%)] bg-clip-text text-[2.6vw] font-black uppercase leading-none tracking-[0.32em] text-transparent drop-shadow-[0_0_18px_rgba(255,200,100,0.3)] [-webkit-text-stroke:1px_rgba(255,255,255,0.35)] lg:text-[1.4vw]">
+              Powered by Nature
+            </span>
+            <span className="font-giant whitespace-nowrap bg-[linear-gradient(90deg,#2e1c0c_0%,#5e3f1c_24%,#ffedbe_50%,#5e3f1c_76%,#2e1c0c_100%)] bg-clip-text text-[9vw] font-black uppercase leading-[0.95] tracking-tight text-transparent drop-shadow-[0_0_35px_rgba(255,200,100,0.35)] [-webkit-text-stroke:1px_rgba(255,255,255,0.35)] lg:text-[5.5vw]">
+              Pure Ingredients
+            </span>
           </h1>
         </div>
 
