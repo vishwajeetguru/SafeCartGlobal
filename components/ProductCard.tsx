@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { ArrowUpRight, ShoppingCart } from "lucide-react";
+import { ArrowUpRight, Check, ShoppingCart } from "lucide-react";
+import { useCart } from "./CartContext";
 
 export interface Product {
   title: string;
@@ -20,6 +21,22 @@ interface ProductCardProps {
 
 export default function ProductCard({ product, index }: ProductCardProps) {
   const [hovered, setHovered] = useState(false);
+  const [added, setAdded] = useState(false);
+  const addedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { addItem } = useCart();
+
+  useEffect(() => {
+    return () => {
+      if (addedTimer.current) clearTimeout(addedTimer.current);
+    };
+  }, []);
+
+  const handleAdd = () => {
+    addItem(product);
+    setAdded(true);
+    if (addedTimer.current) clearTimeout(addedTimer.current);
+    addedTimer.current = setTimeout(() => setAdded(false), 1200);
+  };
 
   return (
     <motion.article
@@ -29,7 +46,7 @@ export default function ProductCard({ product, index }: ProductCardProps) {
       transition={{ duration: 0.55, delay: (index % 4) * 0.08, ease: "easeOut" }}
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
-      className="group relative flex h-[440px] w-[76%] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.045] backdrop-blur-sm transition-colors duration-300 hover:border-white/50 sm:w-[46%] lg:w-[31.5%] xl:w-[23.4%]"
+      className="group relative flex h-[420px] w-[74vw] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.045] backdrop-blur-sm transition-colors duration-300 hover:border-white/50 sm:w-[340px] lg:h-[440px] xl:w-[330px]"
     >
       {/* Hover gradient wash */}
       <div
@@ -101,7 +118,7 @@ export default function ProductCard({ product, index }: ProductCardProps) {
             width={200}
             height={340}
             draggable={false}
-            className="h-60 w-auto select-none object-contain drop-shadow-[0_24px_24px_rgba(0,0,0,0.55)]"
+            className="h-52 w-auto select-none object-contain drop-shadow-[0_24px_24px_rgba(0,0,0,0.55)] sm:h-60"
           />
         </motion.div>
 
@@ -128,11 +145,18 @@ export default function ProductCard({ product, index }: ProductCardProps) {
       >
         <button
           type="button"
-          aria-label={`Add ${product.title} to cart`}
+          onClick={handleAdd}
+          aria-label={added ? `${product.title} added to cart` : `Add ${product.title} to cart`}
           tabIndex={hovered ? 0 : -1}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur transition-colors hover:bg-white/25"
+          className={`flex h-10 w-10 items-center justify-center rounded-full backdrop-blur transition-colors ${
+            added ? "bg-lime-300 text-[#0b0f0a]" : "bg-white/15 text-white hover:bg-white/25"
+          }`}
         >
-          <ShoppingCart className="h-4 w-4" strokeWidth={2} />
+          {added ? (
+            <Check className="h-4 w-4" strokeWidth={2.5} />
+          ) : (
+            <ShoppingCart className="h-4 w-4" strokeWidth={2} />
+          )}
         </button>
         <button
           type="button"

@@ -1,3 +1,4 @@
+import { CartProvider } from "../components/CartContext";
 import Header from "../components/Header";
 import HeroScrollCanvas from "../components/HeroScrollCanvas";
 import ProductSlider from "../components/ProductSlider";
@@ -51,6 +52,7 @@ const peptideProducts = [
 export default function Page() {
   return (
     <main className="bg-[#0b0f0a] text-white">
+      <CartProvider>
       {/* Hidden during hero scroll, slides in after all 120 frames complete */}
       <Header />
       <HeroScrollCanvas />
@@ -95,8 +97,16 @@ export default function Page() {
       </section>
 
       <footer className="border-t border-white/10 px-6 py-10 text-center text-xs tracking-[0.25em] text-white/40 sm:px-10">
-        ELIXIR — POWERED BY NATURE
+        <a
+          href="https://www.instagram.com/vishwa__guru"
+          target="_blank"
+          rel="noreferrer"
+          className="transition-colors hover:text-lime-200"
+        >
+          SwiftCart — Powered by Vishwajeet Gawarguru
+        </a>
       </footer>
+      </CartProvider>
     </main>
   );
 }

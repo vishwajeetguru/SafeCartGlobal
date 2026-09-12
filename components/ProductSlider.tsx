@@ -1,9 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ProductCard, { type Product } from "./ProductCard";
+
+gsap.registerPlugin(ScrollTrigger);
 
 interface ProductSliderProps {
   eyebrow?: string;
@@ -16,52 +20,89 @@ export default function ProductSlider({
   title,
   products,
 }: ProductSliderProps) {
+  const sectionRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
-  const dragState = useRef({ down: false, startX: 0, startScroll: 0 });
+  const stRef = useRef<ScrollTrigger | null>(null);
   const [progress, setProgress] = useState(0);
-  const [canPrev, setCanPrev] = useState(false);
-  const [canNext, setCanNext] = useState(true);
+  const [reduced, setReduced] = useState(false);
 
-  const updateScrollState = useCallback(() => {
-    const el = trackRef.current;
-    if (!el) return;
-    const max = el.scrollWidth - el.clientWidth;
-    setProgress(max > 0 ? el.scrollLeft / max : 0);
-    setCanPrev(el.scrollLeft > 8);
-    setCanNext(el.scrollLeft < max - 8);
+  // Pinned horizontal scroll: scrolling down pins the section and slides
+  // through ALL cards. Only after the last card is shown does the page
+  // continue scrolling down.
+  useEffect(() => {
+    const section = sectionRef.current;
+    const track = trackRef.current;
+    if (!section || !track) return;
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setReduced(true);
+      return;
+    }
+
+    const getAmount = () =>
+      Math.max(0, track.scrollWidth - window.innerWidth);
+
+    const ctx = gsap.context(() => {
+      const tween = gsap.to(track, {
+        x: () => -getAmount(),
+        ease: "none",
+        scrollTrigger: {
+          trigger: section,
+          start: "top top",
+          end: () => `+=${getAmount()}`,
+          scrub: 1,
+          pin: true,
+          anticipatePin: 1,
+          invalidateOnRefresh: true,
+          onUpdate: (self) => {
+            stRef.current = self;
+            setProgress(self.progress);
+          },
+        },
+      });
+      stRef.current = tween.scrollTrigger as ScrollTrigger;
+    }, section);
+
+    const refresh = () => ScrollTrigger.refresh();
+    window.addEventListener("load", refresh);
+    // Product images (PNG) change track width once decoded — recalc then.
+    track.querySelectorAll("img").forEach((img) => {
+      if (!img.complete) img.addEventListener("load", refresh, { once: true });
+    });
+
+    return () => {
+      window.removeEventListener("load", refresh);
+      stRef.current = null;
+      ctx.revert();
+    };
   }, []);
 
-  useEffect(() => {
-    updateScrollState();
-    window.addEventListener("resize", updateScrollState);
-    return () => window.removeEventListener("resize", updateScrollState);
-  }, [updateScrollState, products.length]);
-
-  const scrollByPage = (dir: 1 | -1) => {
-    const el = trackRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir * el.clientWidth * 0.75, behavior: "smooth" });
+  // Arrow buttons jump the PAGE scroll (which drives the pin), or the
+  // native track when in reduced-motion fallback mode.
+  const goTo = (dir: 1 | -1) => {
+    const track = trackRef.current;
+    const st = stRef.current;
+    if (!track) return;
+    if (!st) {
+      track.scrollBy({ left: dir * 360, behavior: "smooth" });
+      return;
+    }
+    const amount = Math.max(1, track.scrollWidth - window.innerWidth);
+    const card = track.querySelector(":scope > article");
+    const step = ((card as HTMLElement | null)?.offsetWidth ?? 350) + 20;
+    const target =
+      st.start +
+      Math.min(1, Math.max(0, st.progress + (dir * step) / amount)) *
+        (st.end - st.start);
+    window.scrollTo({ top: target, behavior: "smooth" });
   };
 
-  // Mouse-drag to scroll (touch scrolls natively)
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType !== "mouse" || e.button !== 0) return;
-    const el = trackRef.current;
-    if (!el) return;
-    dragState.current = { down: true, startX: e.clientX, startScroll: el.scrollLeft };
-    el.setPointerCapture(e.pointerId);
-  };
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const el = trackRef.current;
-    if (!el || !dragState.current.down) return;
-    el.scrollLeft = dragState.current.startScroll - (e.clientX - dragState.current.startX);
-  };
-  const endDrag = () => {
-    dragState.current.down = false;
-  };
+  const canPrev = progress > 0.02;
+  const canNext = progress < 0.98;
 
   return (
     <section
+      ref={sectionRef}
       id="peptides"
       aria-label="Product selection"
       className="relative overflow-hidden bg-[#150a30]"
@@ -75,65 +116,69 @@ export default function ProductSlider({
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#0b0f0a] to-transparent" />
       </div>
 
-      <div className="relative mx-auto max-w-[1400px] px-5 py-20 sm:px-8 md:py-24">
+      {/* Pinned viewport — exactly one screen tall */}
+      <div className="relative flex h-svh min-h-[640px] flex-col justify-center overflow-hidden py-6">
         {/* Section header */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="text-center"
-        >
-          {eyebrow && (
-            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-indigo-300/70">
-              {eyebrow}
-            </p>
-          )}
-          <h2 className="mx-auto max-w-3xl text-4xl font-black uppercase leading-[1.05] tracking-tight text-white sm:text-5xl md:text-6xl">
-            {title}
-          </h2>
-        </motion.div>
+        <div className="mx-auto w-full max-w-[1400px] px-5 text-center sm:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+          >
+            {eyebrow && (
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-indigo-300/70">
+                {eyebrow}
+              </p>
+            )}
+            <h2 className="mx-auto max-w-3xl text-4xl font-black uppercase leading-[1.05] tracking-tight text-white sm:text-5xl md:text-6xl">
+              {title}
+            </h2>
+          </motion.div>
 
-        {/* Controls */}
-        <div className="mt-8 flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => scrollByPage(-1)}
-            disabled={!canPrev}
-            aria-label="Scroll products left"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-white/80 transition hover:border-white/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollByPage(1)}
-            disabled={!canNext}
-            aria-label="Scroll products right"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-white/80 transition hover:border-white/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
+          {/* Controls */}
+          <div className="mt-4 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => goTo(-1)}
+              disabled={!canPrev}
+              aria-label="Show previous products"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-white/80 transition hover:border-white/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => goTo(1)}
+              disabled={!canNext}
+              aria-label="Show next products"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-white/80 transition hover:border-white/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Scrollable track — 4 cards in view on xl, scrolls to reveal all */}
+        {/* Card track — translated by ScrollTrigger while pinned */}
         <div
-          ref={trackRef}
-          onScroll={updateScrollState}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
-          onPointerLeave={endDrag}
-          className="scrollbar-hide -mx-5 mt-6 flex cursor-grab snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth px-5 pb-2 active:cursor-grabbing sm:-mx-8 sm:px-8"
+          className={
+            reduced
+              ? "scrollbar-hide mt-4 snap-x snap-mandatory overflow-x-auto"
+              : "mt-4 overflow-hidden"
+          }
         >
-          {products.map((product, i) => (
-            <ProductCard key={`${product.title}-${i}`} product={product} index={i} />
-          ))}
+          <div
+            ref={trackRef}
+            className="flex w-max gap-5 pb-2 pl-[max(1.25rem,calc((100vw-87.5rem)/2+2rem))] pr-[8vw] will-change-transform"
+          >
+            {products.map((product, i) => (
+              <ProductCard key={`${product.title}-${i}`} product={product} index={i} />
+            ))}
+          </div>
         </div>
 
         {/* Progress hairline */}
-        <div className="mx-auto mt-8 h-px w-48 overflow-hidden rounded bg-white/10">
+        <div className="mx-auto mt-4 h-px w-48 overflow-hidden rounded bg-white/10">
           <div
             className="h-full rounded bg-gradient-to-r from-indigo-400 via-purple-300 to-indigo-400 transition-[width] duration-150"
             style={{ width: `${Math.max(8, progress * 100)}%` }}

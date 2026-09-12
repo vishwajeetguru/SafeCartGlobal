@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Elixir — Powered by Nature, Pure Ingredients",
+  title: "SwiftCart — Shop Share Succeed",
   description:
-    "A high-performance scroll-driven hero experience. Powered by Nature, Pure Ingredients.",
+    "SwiftCart — a high-performance scroll-driven shopping experience. Powered by Nature.",
 };
 
 export default function RootLayout({
