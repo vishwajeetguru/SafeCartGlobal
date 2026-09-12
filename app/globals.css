@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: "Fraunces", Georgia, serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+html,
+body {
+  background: #0b0f0a;
+  overscroll-behavior-y: none;
+}
+
+/* Hide scrollbar styling nicety, keep native scroll for ScrollTrigger */
+::selection {
+  background: #b8d9a3;
+  color: #0b0f0a;
+}
+
+canvas {
+  display: block;
+}
+
+/* Hide scrollbars on horizontal slider tracks (touch/drag still work) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
