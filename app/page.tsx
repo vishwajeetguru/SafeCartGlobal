@@ -1,8 +1,11 @@
 import { CartProvider } from "../components/CartContext";
 import Header from "../components/Header";
 import HeroScrollCanvas from "../components/HeroScrollCanvas";
+import Preloader from "../components/Preloader";
 import ProductSlider from "../components/ProductSlider";
 import ProductShowcase from "../components/ProductShowcase";
+import Testimonials from "../components/Testimonials";
+import PaymentMethods from "../components/PaymentMethods";
 
 const peptideProducts = [
   {
@@ -50,10 +53,18 @@ const peptideProducts = [
   },
 ];
 
+// Module-level so the array identity is stable — the Preloader effect
+// depends on it and must run exactly once, never restart mid-load.
+const productImageList = peptideProducts.map((p) => p.imageSrc);
+
 export default function Page() {
   return (
     <main className="bg-[#0b0f0a] text-white">
       <CartProvider>
+      {/* Site preloader — counts 0→100 while ALL assets load
+          (hero backdrop, 120 scroll frames, product shots, floater sheets) */}
+      <Preloader productImages={productImageList} />
+
       {/* Hidden during hero scroll, slides in after all 120 frames complete */}
       <Header />
       <HeroScrollCanvas />
@@ -99,6 +110,10 @@ export default function Page() {
           </div>
         ))}
       </section>
+
+      {/* Social proof + checkout trust, above the footer */}
+      <Testimonials />
+      <PaymentMethods />
 
       <footer className="border-t border-white/10 px-6 py-10 text-center text-xs tracking-[0.25em] text-white/40 sm:px-10">
         <a

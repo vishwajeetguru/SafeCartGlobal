@@ -18,28 +18,63 @@ interface ProductShowcaseProps {
 
 const VEER_SHEET = "/products/flogting-ingradients.png";
 const NARI_SHEET = "/products/flogting-ingradientsp1.png";
-const MEAL_SHEET = "/products/flogting-ingredientsp2.png";
+const MEAL_SHEET = "/products/flogting-ingradientsp2.png";
 const TULSI_SHEET = "/products/flogting-ingradientsp3.png";
 const MIX_BERRY_SHEET = "/products/flogting-ingradientsp4.png";
-const PROTEIN_SHEET = "/products/flogting-ingredientsp21.png";
+const PROTEIN_SHEET = "/products/flogting-ingradientsp21.png";
 
-// Shared 6-float orbit — hexagonal ring around the bottle:
+// All floater sprite sheets — exported so the Preloader can warm them.
+export const FLOATER_SHEETS = [
+  VEER_SHEET,
+  NARI_SHEET,
+  MEAL_SHEET,
+  TULSI_SHEET,
+  MIX_BERRY_SHEET,
+  PROTEIN_SHEET,
+];
+
+// Shared 6-float orbit — hexagonal ring OUTSIDE the bottle:
 // top-left / top-right pair, mid-left / mid-right pair, bottom-left / bottom-right pair.
-// Mobile offsets kept small (7–8rem) so floaters never clip off-stage.
+// Horizontal offsets clear the packshot (mid pair widest); vertical spread is larger
+// than one tile so same-side floaters never stack on each other. On narrow screens
+// the floaters intentionally tuck *behind* the product (see z-index below).
 const FLOAT_POS: string[] = [
-  "-translate-x-[7rem] -translate-y-16 sm:-translate-x-[13rem] sm:-translate-y-24",
-  "translate-x-[7rem] -translate-y-16 sm:translate-x-[13rem] sm:-translate-y-24",
-  "translate-x-[8rem] sm:translate-x-[16rem]",
-  "-translate-x-[8rem] sm:-translate-x-[16rem]",
-  "-translate-x-[7rem] translate-y-14 sm:-translate-x-[13rem] sm:translate-y-20",
-  "translate-x-[7rem] translate-y-14 sm:translate-x-[13rem] sm:translate-y-20",
+  "-translate-x-[8.5rem] -translate-y-24 sm:-translate-x-[15rem] sm:-translate-y-28",
+  "translate-x-[8.5rem] -translate-y-24 sm:translate-x-[15rem] sm:-translate-y-28",
+  "translate-x-[9.5rem] sm:translate-x-[17.5rem]",
+  "-translate-x-[9.5rem] sm:-translate-x-[17.5rem]",
+  "-translate-x-[8.5rem] translate-y-24 sm:-translate-x-[15rem] sm:translate-y-28",
+  "translate-x-[8.5rem] translate-y-24 sm:translate-x-[15rem] sm:translate-y-28",
+];
+// Mirrored orbit — same ring flipped left/right, used on alternate products so the
+// layout doesn't repeat identically for every product.
+const FLOAT_POS_MIRROR: string[] = [
+  "translate-x-[8.5rem] -translate-y-24 sm:translate-x-[15rem] sm:-translate-y-28",
+  "-translate-x-[8.5rem] -translate-y-24 sm:-translate-x-[15rem] sm:-translate-y-28",
+  "-translate-x-[9.5rem] sm:-translate-x-[17.5rem]",
+  "translate-x-[9.5rem] sm:translate-x-[17.5rem]",
+  "translate-x-[8.5rem] translate-y-24 sm:translate-x-[15rem] sm:translate-y-28",
+  "-translate-x-[8.5rem] translate-y-24 sm:-translate-x-[15rem] sm:translate-y-28",
 ];
 const BG_POS_6: string[] = ["0% 0%", "50% 0%", "100% 0%", "0% 100%", "50% 100%", "100% 100%"];
 
-function makeFloaters(prefix: string): Array<{ id: string; pos: string; bgPos: string }> {
+// Per-product optical centering (px, at desktop display size). Measured from each
+// packshot PNG's alpha bbox: some renders sit a few px off the image center
+// (e.g. Veer's box+bottle bbox center is ~37px right of the PNG center ≈ 12px on
+// screen), which made the whole composition read right-heavy vs the arrows.
+// Negative = shift left. Applied via margin (never transform — Framer owns that).
+const OPTICAL_OFFSET_X: Record<string, number> = {
+  "/products/product1.png": -3,
+  "/products/product2.png": 0,
+  "/products/product3.png": -2,
+  "/products/product4.png": -4,
+  "/products/product5.png": 0,
+  "/products/product6.png": -12,
+};
+
+function makeFloaters(prefix: string): Array<{ id: string; bgPos: string }> {
   return BG_POS_6.map((bgPos, i) => ({
     id: `${prefix}-${i}`,
-    pos: FLOAT_POS[i],
     bgPos,
   }));
 }
@@ -56,7 +91,7 @@ export default function ProductShowcase({ products }: ProductShowcaseProps) {
   const [added, setAdded] = useState(false);
   const hoverRef = useRef(false);
   const addTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { addItem } = useCart();
+  const { addItem, openCart } = useCart();
 
   const countProducts = products.length;
   const product = products[active];
@@ -94,6 +129,9 @@ export default function ProductShowcase({ products }: ProductShowcaseProps) {
               ? PROTEIN_SHEET
               : VEER_SHEET;
   const activeBgSize = "300% 200%";
+  // Optical nudge so the packshot's true visual center (not the PNG frame
+  // center) sits on the stage axis — equalizes the arrow gaps both sides.
+  const offsetX = OPTICAL_OFFSET_X[product.imageSrc] ?? 0;
 
   const go = (dir: 1 | -1) =>
     setActive((i) => (i + dir + countProducts) % countProducts);
@@ -116,8 +154,21 @@ export default function ProductShowcase({ products }: ProductShowcaseProps) {
     []
   );
 
+  // Card "SEE DETAIL" buttons (slider) jump the spotlight to that product.
+  useEffect(() => {
+    const onShowProduct = (e: Event) => {
+      const title = (e as CustomEvent<string>).detail;
+      const idx = products.findIndex((p) => p.title === title);
+      if (idx >= 0) setActive(idx);
+    };
+    window.addEventListener("safecart:show-product", onShowProduct);
+    return () =>
+      window.removeEventListener("safecart:show-product", onShowProduct);
+  }, [products]);
+
   const handleAdd = () => {
     addItem(product);
+    openCart();
     setAdded(true);
     if (addTimer.current) clearTimeout(addTimer.current);
     addTimer.current = setTimeout(() => setAdded(false), 1200);
@@ -204,20 +255,38 @@ export default function ProductShowcase({ products }: ProductShowcaseProps) {
             }}
           />
 
-          {/* Floating ingredients — CSS sprite sheets (Veer + Mix Berry), extensible per product. Wrapper holds side position, inner handles bobbing so Framer doesn't override Tailwind translate */}
+          {/* Floating ingredients — CSS sprite sheets, one per product.
+              Wrapper holds side position + entrance fade, inner handles bobbing.
+              IMPORTANT: the wrapper must never animate transform (scale/x/y) —
+              Framer writes `transform` inline, which would override the Tailwind
+              translate positioning and collapse every floater onto the center.
+              Tiles sit BEHIND the packshot (z-0 vs product z-10) so any overlap
+              reads as depth instead of a glitch. The radial feather mask melts
+              the square sprite-tile edges into the dark stage — no boxes.
+              Odd-indexed products use the mirrored orbit so positions vary. */}
           {activeFloaters.map((f, i) => (
-            <div
-              key={f.id}
+            <motion.div
+              key={`${active}-${f.id}`}
               aria-hidden="true"
-              className={`pointer-events-none absolute left-1/2 top-1/2 z-20 ${f.pos}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: i * 0.06, ease: "easeOut" }}
+              className={`pointer-events-none absolute left-1/2 top-1/2 z-0 ${
+                (active % 2 === 1 ? FLOAT_POS_MIRROR : FLOAT_POS)[i] ?? ""
+              }`}
             >
               <motion.div
-                className="h-24 w-24 overflow-hidden rounded-2xl sm:h-28 sm:w-28"
+                className="h-24 w-24 sm:h-28 sm:w-28"
                 style={{
                   backgroundImage: `url(${activeSheet})`,
                   backgroundSize: activeBgSize,
                   backgroundPosition: f.bgPos,
                   backgroundRepeat: "no-repeat",
+                  // Soft circular falloff: solid core, fully transparent rim.
+                  WebkitMaskImage:
+                    "radial-gradient(circle at 50% 50%, black 60%, transparent 78%)",
+                  maskImage:
+                    "radial-gradient(circle at 50% 50%, black 60%, transparent 78%)",
                   filter: "drop-shadow(0 10px 18px rgba(0,0,0,0.45))",
                 }}
                 animate={{ y: [-10, 10, -10], rotate: [-5, 5, -5] }}
@@ -228,7 +297,7 @@ export default function ProductShowcase({ products }: ProductShowcaseProps) {
                   delay: i * 0.4,
                 }}
               />
-            </div>
+            </motion.div>
           ))}
 
           {/* Product image */}
@@ -240,6 +309,7 @@ export default function ProductShowcase({ products }: ProductShowcaseProps) {
               exit={{ opacity: 0, x: -48, scale: 0.96 }}
               transition={{ duration: 0.45, ease: "easeOut" }}
               className="relative z-10"
+              style={{ marginLeft: offsetX }}
             >
               <motion.div
                 animate={{ y: [0, -12, 0] }}
@@ -257,14 +327,18 @@ export default function ProductShowcase({ products }: ProductShowcaseProps) {
             </motion.div>
           </AnimatePresence>
 
-          {/* Soft shadow reflection */}
+          {/* Soft shadow reflection — follows the product's optical offset */}
           <div
             aria-hidden="true"
             className="absolute bottom-8 left-1/2 h-6 w-48 -translate-x-1/2 rounded-[100%] bg-black/70 blur-lg"
+            style={{ marginLeft: offsetX }}
           />
 
           {/* ADD TO CART — bottom center (wrapper locks centering so Framer scale doesn't fight CSS translate) */}
-          <div className="absolute -bottom-2 left-1/2 z-30 -translate-x-1/2">
+          <div
+            className="absolute -bottom-2 left-1/2 z-30 -translate-x-1/2"
+            style={{ marginLeft: offsetX }}
+          >
             <motion.button
               type="button"
               onClick={handleAdd}

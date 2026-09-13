@@ -21,9 +21,15 @@ interface ProductCardProps {
 
 export default function ProductCard({ product, index }: ProductCardProps) {
   const [hovered, setHovered] = useState(false);
+  // Touch devices have no hover — tapping the card pins the actions open.
+  const [tapped, setTapped] = useState(false);
+  const [focused, setFocused] = useState(false);
   const [added, setAdded] = useState(false);
   const addedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { addItem } = useCart();
+  const { addItem, openCart } = useCart();
+
+  // Actions show on hover (desktop), tap (mobile) or keyboard focus.
+  const active = hovered || tapped || focused;
 
   useEffect(() => {
     return () => {
@@ -33,9 +39,20 @@ export default function ProductCard({ product, index }: ProductCardProps) {
 
   const handleAdd = () => {
     addItem(product);
+    openCart();
     setAdded(true);
     if (addedTimer.current) clearTimeout(addedTimer.current);
     addedTimer.current = setTimeout(() => setAdded(false), 1200);
+  };
+
+  const handleDetail = () => {
+    // Jump the spotlight showcase to this product.
+    window.dispatchEvent(
+      new CustomEvent<string>("safecart:show-product", {
+        detail: product.title,
+      })
+    );
+    document.getElementById("featured")?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
@@ -45,8 +62,15 @@ export default function ProductCard({ product, index }: ProductCardProps) {
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.55, delay: (index % 4) * 0.08, ease: "easeOut" }}
       onHoverStart={() => setHovered(true)}
-      onHoverEnd={() => setHovered(false)}
-      className="group relative flex h-[420px] w-[74vw] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.045] backdrop-blur-sm transition-colors duration-300 hover:border-white/50 sm:w-[340px] lg:h-[440px] xl:w-[330px]"
+      onHoverEnd={() => {
+        setHovered(false);
+        setTapped(false);
+      }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      onClick={() => setTapped((t) => !t)}
+      aria-expanded={active}
+      className="group relative flex h-[420px] w-[74vw] shrink-0 cursor-pointer snap-start flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.045] backdrop-blur-sm transition-colors duration-300 hover:border-white/50 sm:w-[340px] lg:h-[440px] xl:w-[330px]"
     >
       {/* Hover gradient wash */}
       <div
@@ -75,7 +99,7 @@ export default function ProductCard({ product, index }: ProductCardProps) {
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"
         >
-          {!hovered ? (
+          {!active ? (
             <span className="whitespace-nowrap text-[64px] font-black uppercase leading-none tracking-tight text-white/[0.09]">
               {product.giantText}
             </span>
@@ -108,7 +132,7 @@ export default function ProductCard({ product, index }: ProductCardProps) {
 
         {/* Product image */}
         <motion.div
-          animate={{ scale: hovered ? 1.07 : 1, y: hovered ? -6 : 0 }}
+          animate={{ scale: active ? 1.07 : 1, y: active ? -6 : 0 }}
           transition={{ type: "spring", stiffness: 260, damping: 22 }}
           className="relative"
         >
@@ -134,20 +158,22 @@ export default function ProductCard({ product, index }: ProductCardProps) {
         {product.specs}
       </p>
 
-      {/* Hover actions */}
+      {/* Hover/tap actions — stopPropagation so tapping a button
+          doesn't toggle the card back closed */}
       <motion.div
         initial={false}
-        animate={{ opacity: hovered ? 1 : 0, y: hovered ? 0 : 14 }}
+        animate={{ opacity: active ? 1 : 0, y: active ? 0 : 14 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
+        onClick={(e) => e.stopPropagation()}
         className={`absolute inset-x-0 bottom-5 z-20 flex items-center justify-center gap-2.5 ${
-          hovered ? "pointer-events-auto" : "pointer-events-none"
+          active ? "pointer-events-auto" : "pointer-events-none"
         }`}
       >
         <button
           type="button"
           onClick={handleAdd}
           aria-label={added ? `${product.title} added to cart` : `Add ${product.title} to cart`}
-          tabIndex={hovered ? 0 : -1}
+          tabIndex={active ? 0 : -1}
           className={`flex h-10 w-10 items-center justify-center rounded-full backdrop-blur transition-colors ${
             added ? "bg-lime-300 text-[#0b0f0a]" : "bg-white/15 text-white hover:bg-white/25"
           }`}
@@ -160,7 +186,8 @@ export default function ProductCard({ product, index }: ProductCardProps) {
         </button>
         <button
           type="button"
-          tabIndex={hovered ? 0 : -1}
+          onClick={handleDetail}
+          tabIndex={active ? 0 : -1}
           className="group/btn flex h-10 items-center gap-2 rounded-full bg-white py-0 pl-4 pr-1.5 text-[11px] font-semibold tracking-[0.12em] text-indigo-950 transition-colors hover:bg-indigo-100"
         >
           SEE DETAIL

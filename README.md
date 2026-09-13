@@ -2,6 +2,8 @@
 
 A high-performance, scroll-driven e-commerce experience built with Next.js — featuring a cinematic canvas hero, a pinned horizontal product slider, and a working mini-cart.
 
+**🌐 Live Demo:** https://vishwajeetguru-swiftcart.netlify.app/
+
 **Live sections:** scroll hero (120-frame canvas scrub) → peptide/wellness product slider → brand ritual → footer.
 
 ## ✨ Features
