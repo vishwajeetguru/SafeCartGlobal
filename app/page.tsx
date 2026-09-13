@@ -2,6 +2,7 @@ import { CartProvider } from "../components/CartContext";
 import Header from "../components/Header";
 import HeroScrollCanvas from "../components/HeroScrollCanvas";
 import ProductSlider from "../components/ProductSlider";
+import ProductShowcase from "../components/ProductShowcase";
 
 const peptideProducts = [
   {
@@ -62,6 +63,9 @@ export default function Page() {
         title="Our Peptide Selection"
         products={peptideProducts}
       />
+
+      {/* Single-product spotlight with animated background blobs */}
+      <ProductShowcase products={peptideProducts} />
 
       {/* Content after the 300vh pin — proves the scrub releases cleanly */}
       <section

@@ -8,8 +8,10 @@ import { formatINR, useCart } from "./CartContext";
 
 export default function Header() {
   const [visible, setVisible] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
-  const { items, count, subtotal, setQty, removeItem } = useCart();
+  const { items, count, subtotal, setQty, removeItem, cartOpen, closeCart, toggleCart } =
+    useCart();
+
+  const setCartOpen = toggleCart;
 
   useEffect(() => {
     let rafId = 0;
@@ -40,16 +42,16 @@ export default function Header() {
   useEffect(() => {
     if (!cartOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setCartOpen(false);
+      if (e.key === "Escape") closeCart();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cartOpen]);
+  }, [cartOpen, closeCart]);
 
   // If the header hides (scrolled back into hero), close the cart too
   useEffect(() => {
-    if (!visible) setCartOpen(false);
-  }, [visible]);
+    if (!visible) closeCart();
+  }, [visible, closeCart]);
 
   return (
     <header
@@ -94,7 +96,7 @@ export default function Header() {
             {/* Cart button with quantity badge */}
             <button
               type="button"
-              onClick={() => setCartOpen((o) => !o)}
+              onClick={() => toggleCart()}
               tabIndex={visible ? 0 : -1}
               aria-label={`Cart, ${count} items`}
               aria-expanded={cartOpen}
@@ -132,7 +134,7 @@ export default function Header() {
             <div
               aria-hidden="true"
               className="fixed inset-0 z-[-1] cursor-default"
-              onClick={() => setCartOpen(false)}
+              onClick={() => closeCart()}
             />
             <motion.div
               initial={{ opacity: 0, y: -10, scale: 0.98 }}
@@ -149,8 +151,8 @@ export default function Header() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => setCartOpen(false)}
-                  aria-label="Close cart"
+              onClick={() => closeCart()}
+              aria-label="Close cart"
                   className="flex h-8 w-8 items-center justify-center rounded-full text-white/60 transition hover:bg-white/10 hover:text-white"
                 >
                   <X className="h-4 w-4" />
@@ -166,7 +168,7 @@ export default function Header() {
                   <button
                     type="button"
                     onClick={() => {
-                      setCartOpen(false);
+                      closeCart();
                       document
                         .getElementById("peptides")
                         ?.scrollIntoView({ behavior: "smooth" });

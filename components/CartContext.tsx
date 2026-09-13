@@ -22,6 +22,10 @@ interface CartContextValue {
   addItem: (product: Product) => void;
   removeItem: (title: string) => void;
   setQty: (title: string, qty: number) => void;
+  cartOpen: boolean;
+  openCart: () => void;
+  closeCart: () => void;
+  toggleCart: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -40,6 +44,11 @@ export function formatINR(value: number): string {
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
+
+  const openCart = useCallback(() => setCartOpen(true), []);
+  const closeCart = useCallback(() => setCartOpen(false), []);
+  const toggleCart = useCallback(() => setCartOpen((o) => !o), []);
 
   const addItem = useCallback((product: Product) => {
     setItems((prev) => {
@@ -82,8 +91,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items]);
 
   const value = useMemo(
-    () => ({ items, count, subtotal, addItem, removeItem, setQty }),
-    [items, count, subtotal, addItem, removeItem, setQty]
+    () => ({
+      items,
+      count,
+      subtotal,
+      addItem,
+      removeItem,
+      setQty,
+      cartOpen,
+      openCart,
+      closeCart,
+      toggleCart,
+    }),
+    [items, count, subtotal, addItem, removeItem, setQty, cartOpen, openCart, closeCart, toggleCart]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
